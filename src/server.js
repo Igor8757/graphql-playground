@@ -1,42 +1,64 @@
 import { GraphQLServer } from 'graphql-yoga'
+import uuidv4 from 'uuid/v4'
+
+let heroes = []
 
 // Types
 const typeDefs = `
     type Query {
+        heroes(query: String): [Hero!]!
+        skills(query: String): [Skill!]!
+    }
+
+    type Mutation {
+        createHero(class: String!, armor: Int!, hp: Float!): Hero!
+    }
+
+    type Hero {
+        id: ID!
         class: String!
         armor: Int!
         damage: Float
         hp: Float!
         alive: Boolean
-        skill: Skill!
-        getClass(class: String!): String!
-
+        skills: [Skill]
+        items: [String]
+        getClass(class: String): String
     }
 
     type Skill {
         name: String!
         damage: Int!
         effect: String!
+        skillOwner: Hero!
     }
 `
 
 const resolvers = {
     Query: {
-        class() {
-            return 'Warrior'
-        },
-        armor() {
-            return 5
-        },
-        damage() {
-            return 2
-        },
-        skill() {
-            return {
-                name: 'Bash',
-                damage: 5,
-                effect: 'Stun'
+        heroes() {
+            return ['dfdf']
+        }
+    },
+    Mutation: {
+        createHero(parent, args, ctx, info) {
+            const classTaken = heroes.some((hero) => hero.class === args.class)
+            if (classTaken) {
+                throw new Error('class taken !!')
             }
+            const hero = {
+                id: uuidv4(),
+                class: args.class,
+                armor: args.armor,
+                hp: args.hp
+            }
+            heroes.push(hero)
+            return hero
+        }
+    },
+    Hero: {
+        items() {
+            return ['Sword','Shield','Potion']
         },
         getClass(parent, args, ctx, info) {
             if(args.class) {
@@ -45,7 +67,14 @@ const resolvers = {
                 return 'No class found'
             }
         }
-    }
+    },
+    Skill: {
+        skillOwner(parent, args, ctx, info) {
+            return heroes.find((hero) => {
+                return hero.id === parent.skillOwner
+            })
+        }
+    }         
 }
 
 const server = new GraphQLServer({
